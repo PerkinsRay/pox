@@ -32,6 +32,23 @@ log = core.getLogger()
 # Can be overriden on commandline.
 _flood_delay = 0
 
+firewall = {}
+
+def AddRule (event, ip="", port=""):
+  firewall[(event.connection,ip,port)]=True
+
+# function that allows deleting firewall rules from the firewall table
+def DeleteRule (event, ip="",port=""):
+  try:
+    del firewall[(event.connection,ip,port)]
+  except KeyError:
+    pass
+
+# function to display firewall rules
+def ShowRules ():
+  for key in firewall:
+    print ("Rule %s defined" % key)
+	
 class LearningSwitch (object):
   """
   The learning switch "brain" associated with a single OpenFlow switch.
@@ -95,6 +112,18 @@ class LearningSwitch (object):
     """
     Handle packet in messages from the switch to implement above algorithm.
     """
+	eth=dpkt.ethernet.Ethernet(event.data)
+	if eth.type==dpkt.ethernet.ETH_TYPE_IP:
+		ip=eth.data
+		if ip.p==dpkt.ip.IP_PROTO_TCP: #Check for TCP packets
+			TCP=ip.data
+		if firewall[(event.connection,ip.src,TCP.sport)]==True:
+			return 
+           #ADD TCP packets Analysis code here
+		elif ip.p==dpkt.ip.IP_PROTO_UDP: #Check for UDP packets
+			UDP=ip.data
+		if firewall[(event.connection,ip.src,UDP.sport)]==True:
+			return 
 
     packet = event.parsed
 
